@@ -152,7 +152,8 @@ int fuse_do_open(struct fuse_conn *fc, u64 nodeid, struct file *file,
 			ff->fh = outarg.fh;
 			ff->open_flags = outarg.open_flags;
 
-		} else if (err != -ENOSYS) {
+			fuse_passthrough_setup(fc, ff, &outarg);
+                } else if (err != -ENOSYS) {
 			fuse_file_free(ff);
 			return err;
 		} else {
@@ -281,7 +282,9 @@ void fuse_release_common(struct file *file, bool isdir)
 	struct fuse_release_args *ra = ff->release_args;
 	int opcode = isdir ? FUSE_RELEASEDIR : FUSE_RELEASE;
 
-	fuse_prepare_release(fi, ff, file->f_flags, opcode);
+	fuse_passthrough_release(&ff->passthrough);
+
+        fuse_prepare_release(fi, ff, file->f_flags, opcode);
 
 	if (ff->flock) {
 		ra->inarg.release_flags |= FUSE_RELEASE_FLOCK_UNLOCK;
