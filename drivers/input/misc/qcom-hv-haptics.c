@@ -1372,6 +1372,8 @@ static int haptics_enable_play(struct haptics_chip *chip, bool en)
 	int rc;
 	u8 val;
 
+	return 0;
+
 	if (en) {
 		val = SC_CLR_BIT | AUTO_RES_ERR_CLR_BIT |
 			HPWR_RDY_FAULT_CLR_BIT;
@@ -4519,6 +4521,8 @@ static int haptics_suspend(struct device *dev)
 	struct haptics_play_info *play = &chip->play;
 	int rc;
 
+	return 0;
+
 	if (chip->cfg_revision == HAP_CFG_V1)
 		return 0;
 
@@ -4555,6 +4559,8 @@ static int haptics_suspend(struct device *dev)
 static int haptics_resume(struct device *dev)
 {
 	struct haptics_chip *chip = dev_get_drvdata(dev);
+
+	return 0;
 
 	if (chip->cfg_revision == HAP_CFG_V1)
 		return 0;
