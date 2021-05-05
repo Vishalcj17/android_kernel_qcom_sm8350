@@ -164,4 +164,11 @@ static bool __maybe_unused usb_get_remote_wakeup_status(struct usb_gadget *gadge
 { return false; }
 #endif
 
+enum oplus_dwc3_notify_event {
+	DWC3_ENUM_DONE,
+};
+
+extern void oplus_dwc3_set_notifier(void (*notify)(enum oplus_dwc3_notify_event event));
+extern int oplus_dwc3_notify_event(enum oplus_dwc3_notify_event event);
+
 #endif /* __LINUX_USB_DWC3_MSM_H */
