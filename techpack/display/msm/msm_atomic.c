@@ -156,6 +156,7 @@ msm_disable_outputs(struct drm_device *dev, struct drm_atomic_state *old_state)
 			old_conn_state, i) {
 		const struct drm_encoder_helper_funcs *funcs;
 		struct drm_encoder *encoder;
+		struct drm_crtc_state *old_crtc_state;
 
 		/*
 		 * Shut down everything that's in the changeset and currently
@@ -522,6 +523,8 @@ static void complete_commit(struct msm_commit *c)
 	kms->funcs->complete_commit(kms, state);
 
 	drm_atomic_state_put(state);
+
+    priv->commit_end_time =  ktime_get();
 
 	commit_destroy(c);
 }

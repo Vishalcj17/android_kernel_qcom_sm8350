@@ -34,6 +34,19 @@
 /* Expand it to 2x for handling atleast 2 connectors safely */
 #define SDE_CRTC_FRAME_EVENT_SIZE	(4 * 2)
 
+#define DSI_PANEL_SAMSUNG_S6E3HC2 0
+#define DSI_PANEL_SAMSUNG_S6E3FC2X01 1
+#define DSI_PANEL_SAMSUNG_SOFEF03F_M 2
+#define DSI_PANEL_SAMSUNG_ANA6705 3
+#define DSI_PANEL_SAMSUNG_ANA6706 4
+#define DSI_PANEL_SAMSUNG_AMB655XL 5
+#define DSI_PANEL_SAMSUNG_AMB655XL08 6
+#define DSI_PANEL_SAMSUNG_AMB670YF01 7
+
+extern char dsi_panel_name;
+extern int oneplus_force_screenfp;
+extern int oneplus_panel_alpha;
+
 /**
  * enum sde_crtc_client_type: crtc client type
  * @RT_CLIENT:	RealTime client like video/cmd mode display
@@ -291,7 +304,6 @@ struct sde_crtc_misr_info {
  * @static_cache_read_work: delayed worker to transition cache state to read
  * @cache_state     : Current static image cache state
  * @dspp_blob_info  : blob containing dspp hw capability information
- * @cached_encoder_mask : cached encoder_mask for vblank work
  */
 struct sde_crtc {
 	struct drm_crtc base;
@@ -341,6 +353,7 @@ struct sde_crtc {
 	struct sde_crtc_frame_event frame_events[SDE_CRTC_FRAME_EVENT_SIZE];
 	struct list_head frame_event_list;
 	spinlock_t spin_lock;
+	spinlock_t fevent_spin_lock;
 
 	/* for handling internal event thread */
 	struct sde_crtc_event event_cache[SDE_CRTC_MAX_EVENT_COUNT];
@@ -374,6 +387,7 @@ struct sde_crtc {
 	struct mutex ltm_buffer_lock;
 	spinlock_t ltm_lock;
 	bool needs_hw_reset;
+        int hist_irq_idx;
 
 	int src_bpp;
 	int target_bpp;
@@ -382,7 +396,6 @@ struct sde_crtc {
 	enum sde_crtc_cache_state cache_state;
 
 	struct drm_property_blob *dspp_blob_info;
-	u32 cached_encoder_mask;
 };
 
 enum sde_crtc_dirty_flags {
@@ -449,6 +462,9 @@ struct sde_crtc_state {
 	struct sde_hw_scaler3_lut_cfg scl3_lut_cfg;
 
 	struct sde_core_perf_params new_perf;
+	bool fingerprint_mode;
+	bool fingerprint_pressed;
+	struct sde_hw_dim_layer *fingerprint_dim_layer;
 };
 
 enum sde_crtc_irq_state {
@@ -918,12 +934,5 @@ void sde_crtc_static_cache_read_kickoff(struct drm_crtc *crtc);
  */
 int sde_crtc_get_num_datapath(struct drm_crtc *crtc,
 		struct drm_connector *connector);
-
-/**
- * sde_crtc_reset_sw_state - reset dirty proerties on crtc and
- *				planes attached to the crtc
- * @crtc: Pointer to DRM crtc object
- */
-void sde_crtc_reset_sw_state(struct drm_crtc *crtc);
 
 #endif /* _SDE_CRTC_H_ */
