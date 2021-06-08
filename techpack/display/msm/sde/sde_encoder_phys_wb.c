@@ -801,8 +801,8 @@ static int sde_encoder_phys_wb_atomic_check(
 	/* bypass check if commit with no framebuffer */
 	fb = sde_wb_connector_state_get_output_fb(conn_state);
 	if (!fb) {
-		SDE_DEBUG("no output framebuffer\n");
-		return 0;
+		SDE_ERROR("no output framebuffer\n");
+		return -EINVAL;
 	}
 
 	SDE_DEBUG("[fb_id:%u][fb:%u,%u]\n", fb->base.id,

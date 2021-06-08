@@ -23,6 +23,10 @@
 #define DSI_CTRL_DMA_LINK_SEL             (BIT(12)|BIT(13))
 #define DSI_CTRL_MDP0_LINK_SEL            (BIT(20)|BIT(22))
 
+#if defined(CONFIG_PXLW_IRIS)
+bool iris_is_chip_supported(void);
+#endif
+
 static bool dsi_dsc_compression_enabled(struct dsi_mode_info *mode)
 {
 	return (mode->dsc_enabled && mode->dsc);
@@ -742,6 +746,11 @@ void dsi_ctrl_hw_cmn_kickoff_command(struct dsi_ctrl_hw *ctrl,
 	reg = DSI_R32(ctrl, DSI_DMA_FIFO_CTRL);
 	reg |= BIT(20);/* Disable write watermark*/
 	reg |= BIT(16);/* Disable read watermark */
+
+#if defined(CONFIG_PXLW_IRIS)
+	if (iris_is_chip_supported())
+		reg = 0x33;
+#endif
 
 	DSI_W32(ctrl, DSI_DMA_FIFO_CTRL, reg);
 	DSI_W32(ctrl, DSI_DMA_CMD_OFFSET, cmd->offset);
