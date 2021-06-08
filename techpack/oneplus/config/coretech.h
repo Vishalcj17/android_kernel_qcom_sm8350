@@ -1,0 +1,1 @@
+#define CONFIG_OEM_BOOT_MODE 1
