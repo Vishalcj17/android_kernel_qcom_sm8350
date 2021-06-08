@@ -31,6 +31,9 @@
 #include <linux/of.h>
 #include <asm/current.h>
 #include <linux/timer.h>
+#if IS_ENABLED(CONFIG_OPLUS_CHG)
+#include <linux/soc/qcom/battery_charger.h>
+#endif
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/trace_msm_ssr_event.h>
@@ -625,6 +628,28 @@ static void notify_each_subsys_device(struct subsys_device **list,
 		trace_pil_notif("after_send_notif", notif, dev->desc->fw_name);
 	}
 }
+
+#if IS_ENABLED(CONFIG_OPLUS_CHG)
+static void (*oplus_notify_event)(enum oplus_subsys_notify_event);
+void oplus_subsys_set_notifier(void (*notify)(enum oplus_subsys_notify_event))
+{
+	oplus_notify_event = notify;
+}
+EXPORT_SYMBOL(oplus_subsys_set_notifier);
+
+int oplus_subsys_notify_event(enum oplus_subsys_notify_event event)
+{
+	int ret = 0;
+
+	if (oplus_notify_event)
+		oplus_notify_event(event);
+	else
+		ret = -ENODEV;
+
+	return ret;
+}
+EXPORT_SYMBOL(oplus_subsys_notify_event);
+#endif
 
 static int subsystem_shutdown(struct subsys_device *dev, void *data)
 {
