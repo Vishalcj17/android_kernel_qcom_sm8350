@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt)	"[drm:%s:%d] " fmt, __func__, __LINE__
@@ -28,6 +28,9 @@
 #endif
 #if defined(CONFIG_PXLW_IRIS)
 #include "iris/dsi_iris5_api.h"
+#elif defined(CONFIG_PXLW_SOFT_IRIS)
+#include "iris/dsi_iris5_api.h"
+#include "iris/dsi_iris5.h"
 #endif
 
 #define BL_NODE_NAME_SIZE 32
@@ -443,13 +446,13 @@ int sde_connector_get_dither_cfg(struct drm_connector *conn,
 	struct sde_connector *c_conn = NULL;
 	struct sde_connector_state *c_state = NULL;
 	size_t dither_sz = 0;
+
 	u32 *p = (u32 *)cfg;
 
 	if (!conn || !state || !p) {
 		SDE_ERROR("invalid arguments\n");
 		return -EINVAL;
 	}
-
 	c_conn = to_sde_connector(conn);
 	c_state = to_sde_connector_state(state);
 
@@ -461,7 +464,7 @@ int sde_connector_get_dither_cfg(struct drm_connector *conn,
   		*cfg = c_conn->blob_dither->data;
   		dither_sz = c_conn->blob_dither->length;
   	}
-	*len = dither_sz;
+  	*len = dither_sz;
 	return 0;
 }
 
@@ -514,7 +517,7 @@ int sde_connector_state_get_mode_info(struct drm_connector_state *conn_state,
 
 	if (!conn_state || !mode_info) {
 		SDE_ERROR("Invalid arguments\n");
- 		return -EINVAL;
+		return -EINVAL;
 	}
 
 	sde_conn_state = to_sde_connector_state(conn_state);
@@ -594,15 +597,13 @@ int sde_connector_get_info(struct drm_connector *connector,
 }
 
 extern void dsi_display_change_err_flag_irq_status(struct dsi_display *display,
-		bool enable);
-
+					bool enable);
 void sde_connector_schedule_status_work(struct drm_connector *connector,
 		bool en)
 {
 	struct sde_connector *c_conn;
 	struct msm_display_info info;
 	struct dsi_display *dsi_display;
-
 	c_conn = to_sde_connector(connector);
 	if (!c_conn)
 		return;
@@ -672,7 +673,7 @@ static int _sde_connector_update_power_locked(struct sde_connector *c_conn)
 	}
 
 	SDE_EVT32(connector->base.id, c_conn->dpms_mode, c_conn->lp_mode, mode);
-	SDE_DEBUG("conn %d - dpms %d, lp %d, panel %d\n", connector->base.id,
+	SDE_ERROR("conn %d - dpms %d, lp %d, panel %d\n", connector->base.id,
 			c_conn->dpms_mode, c_conn->lp_mode, mode);
 
 	if (mode != c_conn->last_panel_power_mode && c_conn->ops.set_power) {
@@ -1030,7 +1031,7 @@ void sde_connector_set_qsync_params(struct drm_connector *connector)
 		qsync_propval = sde_connector_get_property(c_conn->base.state,
 						CONNECTOR_PROP_QSYNC_MODE);
 		if (qsync_propval != c_conn->qsync_mode) {
-			SDE_DEBUG("updated qsync mode %d -> %d\n",
+			SDE_INFO("updated qsync mode %d -> %d\n",
 					c_conn->qsync_mode, qsync_propval);
 			c_conn->qsync_updated = true;
 			c_conn->qsync_mode = qsync_propval;
@@ -1146,6 +1147,7 @@ static int _sde_connector_update_dirty_properties(
 			break;
 		case CONNECTOR_PROP_BL_SCALE:
 		case CONNECTOR_PROP_SV_BL_SCALE:
+			// _sde_connector_update_bl_scale(c_conn);
 			break;
 		case CONNECTOR_PROP_HDR_METADATA:
 			_sde_connector_update_hdr_metadata(c_conn, c_state);
@@ -1889,8 +1891,12 @@ static int sde_connector_atomic_set_property(struct drm_connector *connector,
 	 * atomic set property framework.
 	 */
 	case CONNECTOR_PROP_BL_SCALE:
+		// c_conn->bl_scale = val;
+		// c_conn->bl_scale_dirty = true;
 		break;
 	case CONNECTOR_PROP_SV_BL_SCALE:
+		// c_conn->bl_scale_sv = val;
+		// c_conn->bl_scale_dirty = true;
 		break;
 	case CONNECTOR_PROP_HDR_METADATA:
 		rc = _sde_connector_set_ext_hdr_info(c_conn,
@@ -2293,8 +2299,6 @@ static ssize_t _sde_debugfs_conn_cmd_tx_write(struct file *file,
 {
 	struct drm_connector *connector = file->private_data;
 	struct sde_connector *c_conn = NULL;
-	struct sde_vm_ops *vm_ops;
-	struct sde_kms *sde_kms;
 	char *input, *token, *input_copy, *input_dup = NULL;
 	const char *delim = " ";
 	char buffer[MAX_CMD_PAYLOAD_SIZE] = {0};
@@ -2305,13 +2309,8 @@ static ssize_t _sde_debugfs_conn_cmd_tx_write(struct file *file,
 		SDE_ERROR("invalid argument(s), conn %d\n", connector != NULL);
 		return -EINVAL;
 	}
-	c_conn = to_sde_connector(connector);
 
-	sde_kms = _sde_connector_get_kms(&c_conn->base);
-	if (!sde_kms) {
-		SDE_ERROR("invalid kms\n");
-		return -EINVAL;
-	}
+	c_conn = to_sde_connector(connector);
 
 	if (!c_conn->ops.cmd_transfer) {
 		SDE_ERROR("no cmd transfer support for connector name %s\n",
@@ -2322,14 +2321,6 @@ static ssize_t _sde_debugfs_conn_cmd_tx_write(struct file *file,
 	input = kzalloc(count + 1, GFP_KERNEL);
 	if (!input)
 		return -ENOMEM;
-
-	vm_ops = sde_vm_get_ops(sde_kms);
-	sde_vm_lock(sde_kms);
-	if (vm_ops && vm_ops->vm_owns_hw && !vm_ops->vm_owns_hw(sde_kms)) {
-		SDE_DEBUG("op not supported due to HW unavailablity\n");
-		rc = -EOPNOTSUPP;
-		goto end;
-	}
 
 	if (copy_from_user(input, p, count)) {
 		SDE_ERROR("copy from user failed\n");
@@ -2380,7 +2371,6 @@ static ssize_t _sde_debugfs_conn_cmd_tx_write(struct file *file,
 end1:
 	kfree(input_dup);
 end:
-	sde_vm_unlock(sde_kms);
 	kfree(input);
 	return rc;
 }
@@ -2670,10 +2660,9 @@ static int sde_connector_fill_modes(struct drm_connector *connector,
 
 	mode_count = drm_helper_probe_single_connector_modes(connector,
 			max_width, max_height);
-
-#ifdef CONFIG_PXLW_IRIS
-	drm_mode_sort_for_adfr(&connector->modes);
-#endif
+    #ifdef CONFIG_PXLW_IRIS
+    drm_mode_sort_for_adfr(&connector->modes);
+    #endif
 
 	if (sde_conn->ops.set_allowed_mode_switch)
 		sde_conn->ops.set_allowed_mode_switch(connector,
@@ -2808,6 +2797,10 @@ static int sde_connector_atomic_check(struct drm_connector *connector,
 		struct drm_atomic_state *state)
 {
 	struct sde_connector *c_conn;
+	struct sde_connector_state *c_state;
+	bool qsync_dirty = false, has_modeset = false;
+	struct drm_connector_state *new_conn_state;
+	struct drm_crtc_state *new_crtc_state = NULL;
 
 	if (!connector) {
 		SDE_ERROR("invalid connector\n");
@@ -2815,6 +2808,32 @@ static int sde_connector_atomic_check(struct drm_connector *connector,
 	}
 
 	c_conn = to_sde_connector(connector);
+	new_conn_state = drm_atomic_get_new_connector_state(state, connector);
+
+	if (!new_conn_state) {
+		SDE_ERROR("invalid connector state\n");
+		return -EINVAL;
+	}
+
+	c_state = to_sde_connector_state(new_conn_state);
+	if (new_conn_state->crtc)
+		new_crtc_state = drm_atomic_get_new_crtc_state(state,
+					new_conn_state->crtc);
+
+	has_modeset = sde_crtc_atomic_check_has_modeset(new_conn_state->state,
+						new_conn_state->crtc);
+	qsync_dirty = msm_property_is_dirty(&c_conn->property_info,
+					&c_state->property_state,
+					CONNECTOR_PROP_QSYNC_MODE);
+
+	SDE_DEBUG("has_modeset %d qsync_dirty %d\n", has_modeset, qsync_dirty);
+	if (has_modeset && qsync_dirty && new_crtc_state &&
+		!msm_is_mode_seamless_vrr(&new_crtc_state->adjusted_mode)) {
+		SDE_ERROR("invalid qsync update during modeset\n");
+		return -EINVAL;
+	}
+	new_conn_state = drm_atomic_get_new_connector_state(state, connector);
+
 	if (c_conn->ops.atomic_check)
 		return c_conn->ops.atomic_check(connector,
 				c_conn->display, state);
@@ -3002,8 +3021,6 @@ static int sde_connector_populate_mode_info(struct drm_connector *conn,
 			SDE_ERROR_CONN(c_conn, "invalid topology\n");
 			continue;
 		}
-
-		sde_kms_info_add_keyint(info, "has_cwb_crop", sde_kms->catalog->has_cwb_crop);
 
 		sde_kms_info_add_keyint(info, "mdp_transfer_time_us",
 			mode_info.mdp_transfer_time_us);
@@ -3454,7 +3471,8 @@ error_free_conn:
 	return ERR_PTR(rc);
 }
 
-static int _sde_conn_enable_hw_recovery(struct drm_connector *connector)
+static int _sde_conn_hw_recovery_handler(
+		struct drm_connector *connector, bool val)
 {
 	struct sde_connector *c_conn;
 
@@ -3465,7 +3483,7 @@ static int _sde_conn_enable_hw_recovery(struct drm_connector *connector)
 	c_conn = to_sde_connector(connector);
 
 	if (c_conn->encoder)
-		sde_encoder_enable_recovery_event(c_conn->encoder);
+		sde_encoder_recovery_events_handler(c_conn->encoder, val);
 
 	return 0;
 }
@@ -3483,7 +3501,7 @@ int sde_connector_register_custom_event(struct sde_kms *kms,
 		ret = 0;
 		break;
 	case DRM_EVENT_SDE_HW_RECOVERY:
-		ret = _sde_conn_enable_hw_recovery(conn_drm);
+		ret = _sde_conn_hw_recovery_handler(conn_drm, val);
 		break;
 	default:
 		break;

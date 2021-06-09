@@ -370,7 +370,6 @@ static int sde_hw_pp_setup_dither(struct sde_hw_pingpong *pp,
 			((dither->matrix[i + 3] & REG_MASK(4)) << 12);
 		SDE_REG_WRITE(c, base + offset, data);
 	}
-
 	if(panel_dither_enable) {
 		dsi_display = get_main_display();
 		if(strcmp(dsi_display->panel->name, "samsung amb655x fhd cmd mode dsc dsi panel") == 0) {

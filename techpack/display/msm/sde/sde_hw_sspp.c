@@ -1243,16 +1243,17 @@ static void _setup_layer_ops(struct sde_hw_pipe *c,
 
 	if (test_bit(SDE_SSPP_CSC, &features) ||
 		test_bit(SDE_SSPP_CSC_10BIT, &features))
-		c->ops.setup_csc = sde_hw_sspp_setup_csc;
 #if defined(PXLW_IRIS_DUAL)
 	{
 #endif
-	if (test_bit(SDE_SSPP_DGM_CSC, &features))
-		c->ops.setup_dgm_csc = sde_hw_sspp_setup_dgm_csc;
+		c->ops.setup_csc = sde_hw_sspp_setup_csc;
 #if defined(PXLW_IRIS_DUAL)
 		c->ops.setup_csc_v2 = sde_hw_sspp_setup_csc_v2;
 	}
 #endif
+
+	if (test_bit(SDE_SSPP_DGM_CSC, &features))
+		c->ops.setup_dgm_csc = sde_hw_sspp_setup_dgm_csc;
 
 	if (test_bit(SDE_SSPP_SCALER_QSEED2, &features)) {
 		c->ops.setup_sharpening = sde_hw_sspp_setup_sharpening;

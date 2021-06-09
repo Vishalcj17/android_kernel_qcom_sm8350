@@ -364,7 +364,6 @@ struct sde_hw_sspp_ops {
 					const struct sde_format *fmt,
 					struct sde_csc_cfg *data);
 #endif
-
 	/**
 	 * setup_solidfill - enable/disable colorfill
 	 * @ctx: Pointer to pipe context
