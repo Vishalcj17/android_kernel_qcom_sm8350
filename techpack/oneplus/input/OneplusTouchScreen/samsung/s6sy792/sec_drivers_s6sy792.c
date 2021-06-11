@@ -3821,6 +3821,7 @@ struct i2c_driver sec_tp_i2c_driver = {
 		   .owner = THIS_MODULE,
 		   .of_match_table = tp_match_table,
 		   .pm = &tp_pm_ops,
+		   .probe_type = PROBE_PREFER_ASYNCHRONOUS,
 		   },
 };
 
