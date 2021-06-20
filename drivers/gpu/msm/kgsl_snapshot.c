@@ -1225,19 +1225,6 @@ static const struct attribute *snapshot_attrs[] = {
 	NULL,
 };
 
-static int kgsl_panic_notifier_callback(struct notifier_block *nb,
-		unsigned long action, void *unused)
-{
-	struct kgsl_device *device = container_of(nb, struct kgsl_device,
-							panic_nb);
-
-	/* To send NMI to GMU */
-	device->gmu_fault = true;
-	kgsl_device_snapshot_atomic(device);
-
-	return NOTIFY_OK;
-}
-
 void kgsl_device_snapshot_probe(struct kgsl_device *device, u32 size)
 {
 	device->snapshot_memory.size = size;
@@ -1269,8 +1256,6 @@ void kgsl_device_snapshot_probe(struct kgsl_device *device, u32 size)
 	device->snapshot_legacy = false;
 
 	device->snapshot_atomic = false;
-	device->panic_nb.notifier_call = kgsl_panic_notifier_callback;
-	device->panic_nb.priority = 1;
 
 	/*
 	 * Set this to false so that we only ever keep the first snapshot around
@@ -1285,8 +1270,6 @@ void kgsl_device_snapshot_probe(struct kgsl_device *device, u32 size)
 
 	WARN_ON(sysfs_create_bin_file(&device->snapshot_kobj, &snapshot_attr));
 	WARN_ON(sysfs_create_files(&device->snapshot_kobj, snapshot_attrs));
-	atomic_notifier_chain_register(&panic_notifier_list,
-			&device->panic_nb);
 }
 
 /**
@@ -1308,9 +1291,6 @@ void kgsl_device_snapshot_close(struct kgsl_device *device)
 		if (msm_minidump_remove_region(&md_entry) < 0)
 			dev_err(device->dev, "Failed to remove snapshot with minidump\n");
 	}
-
-	atomic_notifier_chain_unregister(&panic_notifier_list,
-			&device->panic_nb);
 
 	sysfs_remove_bin_file(&device->snapshot_kobj, &snapshot_attr);
 	sysfs_remove_files(&device->snapshot_kobj, snapshot_attrs);

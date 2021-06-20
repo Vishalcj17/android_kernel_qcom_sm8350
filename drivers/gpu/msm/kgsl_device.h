@@ -268,8 +268,6 @@ struct kgsl_device {
 	} snapshot_memory;
 
 	struct kgsl_snapshot *snapshot;
-	/** @panic_nb: notifier block to capture GPU snapshot on kernel panic */
-	struct notifier_block panic_nb;
 	struct {
 		void *ptr;
 		u32 size;
