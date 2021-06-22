@@ -21,6 +21,13 @@
 #define THERMAL_TRIPS_NONE	-1
 #define THERMAL_MAX_TRIPS	12
 
+#ifdef CONFIG_ONEPLUS_THERM_OPT
+#define THERMAL_MAX_ACTIVE	16
+#define THERMAL_MAX_MASK	(1UL<<8)
+#define THERMAL_TRIP_POINT	(1UL<<7)
+#define THERMAL_TEMP_MASK	0x7F
+#endif
+
 /* invalid cooling state */
 #define THERMAL_CSTATE_INVALID -1UL
 
