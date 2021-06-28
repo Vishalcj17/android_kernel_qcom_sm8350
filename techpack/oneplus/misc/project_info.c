@@ -26,7 +26,9 @@ static struct component_info component_info_desc[COMPONENT_MAX];
 static struct kobject *project_info_kobj;
 static struct project_info *project_info_desc;
 
+#ifndef CONFIG_QGKI
 int a_board_val = 0;
+#endif
 static struct kobject *component_info;
 static ssize_t project_info_get(struct kobject *kobj,
 				struct kobj_attribute *attr, char *buf);
@@ -139,8 +141,10 @@ static ssize_t project_info_get(struct kobject *kobj,
 			return snprintf(buf, BUF_SIZE, "0x%x\n",
 					socinfo_get_serial_number());
 
+#ifndef CONFIG_QGKI
 		if (attr == &op_attr_aboard_id)
 			return snprintf(buf, BUF_SIZE, "%d\n", a_board_val);
+#endif
 	}
 
 	return -EINVAL;
