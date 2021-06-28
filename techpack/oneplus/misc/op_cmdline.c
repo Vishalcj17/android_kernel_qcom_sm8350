@@ -42,7 +42,11 @@ static char backlight_manufacture[32] = {0};
 static char lcd_version[32] = {0};
 static char backlight_version[32] = {0};
 
+#ifdef CONFIG_QGKI
+static char *enum_ftm_mode[] = {"normal",
+#else
 char *enum_ftm_mode[] = {"normal",
+#endif
 						 "fastboot",
 						 "recovery",
 						 "aging",

@@ -10,7 +10,11 @@ int hw_version = 0;
 int rf_version = 0;
 int prj_version = 0;
 
+#ifdef CONFIG_QGKI
+static char *enum_ftm_mode[] = {"normal",
+#else
 char *enum_ftm_mode[] = {"normal",
+#endif
 						 "fastboot",
 						 "recovery",
 						 "aging",
