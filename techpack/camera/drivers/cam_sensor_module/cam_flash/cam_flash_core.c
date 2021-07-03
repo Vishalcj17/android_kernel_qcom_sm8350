@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -10,7 +10,6 @@
 #include "cam_res_mgr_api.h"
 #include "cam_common_util.h"
 #include "cam_packet_util.h"
-#include <asm/div64.h>
 
 static uint default_on_timer = 2;
 module_param(default_on_timer, uint, 0644);
@@ -519,6 +518,20 @@ static int cam_flash_high(
 
 	return rc;
 }
+
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+int cam_flash_on(struct cam_flash_ctrl *flash_ctrl,
+	struct cam_flash_frame_setting *flash_data,
+	int mode) {
+	int rc = 0;
+	if (mode == 0) {
+		rc = cam_flash_low(flash_ctrl, flash_data);
+	} else if (mode == 1) {
+		rc = cam_flash_high(flash_ctrl, flash_data);
+	}
+	return rc;
+}
+#endif
 
 static int cam_flash_duration(struct cam_flash_ctrl *fctrl,
 	struct cam_flash_frame_setting *flash_data)
@@ -1264,19 +1277,18 @@ update_req_mgr:
 		CAM_PKT_NOP_OPCODE) ||
 		((csl_packet->header.op_code & 0xFFFFF) ==
 		CAM_FLASH_PACKET_OPCODE_SET_OPS)) {
-		memset(&add_req, 0, sizeof(add_req));
 		add_req.link_hdl = fctrl->bridge_intf.link_hdl;
 		add_req.req_id = csl_packet->header.request_id;
 		add_req.dev_hdl = fctrl->bridge_intf.device_hdl;
 
 		if ((csl_packet->header.op_code & 0xFFFFF) ==
-			CAM_FLASH_PACKET_OPCODE_SET_OPS) {
-			add_req.trigger_eof = true;
-			add_req.skip_at_sof = 1;
-		}
+			CAM_FLASH_PACKET_OPCODE_SET_OPS)
+			add_req.skip_before_applying = 1;
+		else
+			add_req.skip_before_applying = 0;
 
 		if (fctrl->bridge_intf.crm_cb &&
-			fctrl->bridge_intf.crm_cb->add_req) {
+			fctrl->bridge_intf.crm_cb->add_req)
 			rc = fctrl->bridge_intf.crm_cb->add_req(&add_req);
 			if  (rc) {
 				CAM_ERR(CAM_FLASH,
@@ -1284,10 +1296,7 @@ update_req_mgr:
 					csl_packet->header.request_id);
 				return rc;
 			}
-			CAM_DBG(CAM_FLASH,
-				"add req %lld to req_mgr, trigger_eof %d",
-				add_req.req_id, add_req.trigger_eof);
-		}
+		CAM_DBG(CAM_FLASH, "add req to req_mgr= %lld", add_req.req_id);
 	}
 	return rc;
 }
@@ -1556,10 +1565,10 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 
 			if (flash_data->opcode ==
 				CAMERA_SENSOR_FLASH_OP_FIREDURATION) {
-				add_req.trigger_eof = true;
 				/* Active time for the preflash */
 				flash_data->flash_active_time_ms =
-				do_div(flash_operation_info->time_on_duration_ns, 1000000);
+				(flash_operation_info->time_on_duration_ns)
+					/ 1000000;
 				CAM_DBG(CAM_FLASH,
 					"PRECISE FLASH: active_time: %llu",
 					flash_data->flash_active_time_ms);
@@ -1746,7 +1755,6 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		CAM_PKT_NOP_OPCODE) ||
 		((csl_packet->header.op_code & 0xFFFFF) ==
 		CAM_FLASH_PACKET_OPCODE_SET_OPS)) {
-		memset(&add_req, 0, sizeof(add_req));
 		add_req.link_hdl = fctrl->bridge_intf.link_hdl;
 		add_req.req_id = csl_packet->header.request_id;
 		add_req.dev_hdl = fctrl->bridge_intf.device_hdl;
@@ -1754,26 +1762,17 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		if ((csl_packet->header.op_code & 0xFFFFF) ==
 			CAM_FLASH_PACKET_OPCODE_SET_OPS) {
 			add_req.trigger_eof = true;
-			if (flash_data->opcode == CAMERA_SENSOR_FLASH_OP_OFF) {
-				add_req.skip_at_sof = 1;
-				add_req.skip_at_eof = 1;
-			} else
-				add_req.skip_at_sof = 1;
+			add_req.skip_before_applying = 0;
+		} else {
+			add_req.trigger_eof = false;
+			add_req.skip_before_applying = 0;
 		}
-
+		CAM_DBG(CAM_FLASH,
+			"add req to req_mgr= %lld:: trigger_eof: %d",
+			add_req.req_id, add_req.trigger_eof);
 		if (fctrl->bridge_intf.crm_cb &&
-			fctrl->bridge_intf.crm_cb->add_req) {
-			rc = fctrl->bridge_intf.crm_cb->add_req(&add_req);
-			if  (rc) {
-				CAM_ERR(CAM_FLASH,
-					"Failed in adding request: %llu to request manager",
-					csl_packet->header.request_id);
-				return rc;
-			}
-			CAM_DBG(CAM_FLASH,
-				"add req %lld to req_mgr, trigger_eof %d",
-				add_req.req_id, add_req.trigger_eof);
-		}
+			fctrl->bridge_intf.crm_cb->add_req)
+			fctrl->bridge_intf.crm_cb->add_req(&add_req);
 	}
 
 	return rc;
