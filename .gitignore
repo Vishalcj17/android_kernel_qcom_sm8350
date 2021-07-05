@@ -148,4 +148,4 @@ x509.genkey
 /compile_commands.json
 
 # generated defconfigs
-arch/*/configs/vendor/*_defconfig
+#arch/*/configs/vendor/*_defconfig
