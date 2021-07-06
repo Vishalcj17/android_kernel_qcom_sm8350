@@ -4919,6 +4919,7 @@ struct i2c_driver syna_i2c_driver = {
 		.name   = TPD_DEVICE,
 		.of_match_table =  syna_match_table,
 		.pm = &syna_pm_ops,
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 };
 
