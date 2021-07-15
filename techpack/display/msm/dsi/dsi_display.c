@@ -109,6 +109,8 @@ bool is_skip_op_required(struct dsi_display *display)
 	return (display->is_cont_splash_enabled || display->trusted_vm_env);
 }
 
+static unsigned int cur_refresh_rate = 60;
+
 static void dsi_display_mask_ctrl_error_interrupts(struct dsi_display *display,
 			u32 mask, bool enable)
 {
@@ -8890,6 +8892,11 @@ static void dsi_display_panel_id_notification(struct dsi_display *display)
 	}
 }
 
+unsigned int dsi_panel_get_refresh_rate(void)
+{
+	return READ_ONCE(cur_refresh_rate);
+}
+
 int dsi_display_enable(struct dsi_display *display)
 {
 	int rc = 0;
@@ -8937,6 +8944,8 @@ int dsi_display_enable(struct dsi_display *display)
 		mode = display->panel->cur_mode;
 		if (!(mode->dsi_mode_flags & DSI_MODE_FLAG_DMS))
 			return 0;
+
+		WRITE_ONCE(cur_refresh_rate, mode->timing.refresh_rate);
 
 		/*
 		 * At this point the panel is ON from bootloader (displaying
