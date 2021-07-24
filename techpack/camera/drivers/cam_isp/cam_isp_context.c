@@ -873,6 +873,16 @@ static int __cam_isp_ctx_handle_buf_done_for_req_list(
 		list_add_tail(&req->list, &ctx->free_req_list);
 		req_isp->reapply = false;
 		req_isp->cdm_reset_before_apply = false;
+		/*
+		 * Only update the process_bubble and bubble_frame_cnt
+		 * when bubble is detected on this req, in case the other
+		 * request is processing bubble.
+		 */
+		if (req_isp->bubble_detected) {
+			atomic_set(&ctx_isp->process_bubble, 0);
+			ctx_isp->bubble_frame_cnt = 0;
+			req_isp->bubble_detected = false;
+		}
 
 		CAM_DBG(CAM_REQ,
 			"Move active request %lld to free list(cnt = %d) [all fences done], ctx %u",
