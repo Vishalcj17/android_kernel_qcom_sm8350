@@ -894,6 +894,8 @@ static inline void update_mmu_cache(struct vm_area_struct *vma,
 #define phys_to_ttbr(addr)	(addr)
 #endif
 
+#define arch_has_hw_pte_young           cpu_has_hw_af
+
 /*
  * On arm64 without hardware Access Flag, copying from user will fail because
  * the pte is old and cannot be marked young. So we always end up with zeroed
