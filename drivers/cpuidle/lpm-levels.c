@@ -1433,7 +1433,7 @@ exit:
 		clusttimer_cancel();
 	}
 	if (cpu->bias) {
-                if (!idx)
+		if (!idx)
 			biastimer_cancel();
 		cpu->bias = 0;
 	}
