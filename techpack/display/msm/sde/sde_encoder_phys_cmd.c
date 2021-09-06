@@ -1023,6 +1023,8 @@ static int _get_tearcheck_threshold(struct sde_encoder_phys *phys_enc)
 		u32 default_time_ns;
 		u32 extra_time_ns;
 		u32 default_line_time_ns;
+		u32 idle_time_ns = 0;
+		u32 transfer_time_us = 0;
 
 		if (phys_enc->parent_ops.get_qsync_fps)
 			phys_enc->parent_ops.get_qsync_fps(
@@ -1092,11 +1094,13 @@ static int _get_tearcheck_threshold(struct sde_encoder_phys *phys_enc)
 
 		SDE_DEBUG_CMDENC(cmd_enc, "slow:%d default:%d extra:%d(ns)\n",
 			slow_time_ns, default_time_ns, extra_time_ns);
-		SDE_DEBUG_CMDENC(cmd_enc, "min_fps:%d fps:%d yres:%d lines:%d\n",
-			qsync_min_fps, default_fps, yres, threshold_lines);
+		SDE_DEBUG_CMDENC(cmd_enc, "xfer:%d(us) idle:%d(ns) lines:%d\n",
+			transfer_time_us, idle_time_ns, threshold_lines);
+		SDE_DEBUG_CMDENC(cmd_enc, "min_fps:%d fps:%d yres:%d\n",
+			qsync_min_fps, default_fps, yres);
 
 		SDE_EVT32(qsync_mode, qsync_min_fps, extra_time_ns, default_fps,
-			yres, threshold_lines);
+			yres, transfer_time_us, threshold_lines);
 	}
 
 exit:
