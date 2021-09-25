@@ -1,14 +1,9 @@
-#include "sec_common.h"
 #include <linux/fs.h>
 
-//#include <linux/syscalls.h>
-/*******LOG TAG Declear*****************************/
-
 #define TPD_DEVICE "sec_common"
-#define TPD_INFO(a, arg...)  pr_debug("[TP]"TPD_DEVICE ": " a, ##arg)
-#define TPD_DEBUG(a, arg...)  pr_debug("[TP]"TPD_DEVICE ": " a, ##arg)
+#include "sec_common.h"
 
-/*********** sec tool operate content***********************/
+//#include <linux/syscalls.h>
 u8 lv1cmd;
 static int lv1_readsize;
 

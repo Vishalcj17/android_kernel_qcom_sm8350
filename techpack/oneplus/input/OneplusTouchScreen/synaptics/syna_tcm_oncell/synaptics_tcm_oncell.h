@@ -13,20 +13,9 @@
 #include <linux/notifier.h>
 #endif
 
+#define TPD_DEVICE "syna-tcm"
 //#include "../../touchpanel_common.h"
 #include "../synaptics_common.h"
-
-#define TPD_DEVICE "syna-tcm"
-
-#define TPD_INFO(a, arg...)  pr_debug("[TP]"TPD_DEVICE ": " a, ##arg)
-#define TPD_DEBUG(a, arg...)  pr_debug("[TP]"TPD_DEVICE ": " a, ##arg)
-#define TPD_DETAIL(a, arg...)  pr_debug("[TP]"TPD_DEVICE ": " a, ##arg)
-
-#define TPD_DEBUG_NTAG(a, arg...)\
-	do{\
-		if (tp_debug)\
-		printk(a, ##arg);\
-	}while(0)
 
 #define SYNAPTICS_TCM_ID_PRODUCT (1 << 0)
 #define SYNAPTICS_TCM_ID_VERSION 0x0007
