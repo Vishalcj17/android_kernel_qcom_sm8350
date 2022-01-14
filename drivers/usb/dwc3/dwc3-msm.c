@@ -44,6 +44,7 @@
 #include <linux/usb/dwc3-msm.h>
 #include <linux/usb/role.h>
 #include <linux/usb/redriver.h>
+#include <linux/dma-iommu.h>
 #ifdef CONFIG_QGKI_MSM_BOOT_TIME_MARKER
 #include <soc/qcom/boot_stats.h>
 #endif
@@ -3374,17 +3375,19 @@ static int dwc3_msm_suspend(struct dwc3_msm *mdwc, bool force_power_collapse,
 
 	dwc3_msm_update_bus_bw(mdwc, BUS_VOTE_NONE);
 
-	/*
-	 * release wakeup source with timeout to defer system suspend to
-	 * handle case where on USB cable disconnect, SUSPEND and DISCONNECT
-	 * event is received.
-	 */
-	if (mdwc->lpm_to_suspend_delay) {
-		dev_dbg(mdwc->dev, "defer suspend with %d(msecs)\n",
-					mdwc->lpm_to_suspend_delay);
-		pm_wakeup_event(mdwc->dev, mdwc->lpm_to_suspend_delay);
-	} else {
-		pm_relax(mdwc->dev);
+	if (!mdwc->in_restart) {
+		/*
+		 * release wakeup source with timeout to defer system suspend to
+		 * handle case where on USB cable disconnect, SUSPEND and DISCONNECT
+		 * event is received.
+		 */
+		if (mdwc->lpm_to_suspend_delay) {
+			dev_dbg(mdwc->dev, "defer suspend with %d(msecs)\n",
+						mdwc->lpm_to_suspend_delay);
+			pm_wakeup_event(mdwc->dev, mdwc->lpm_to_suspend_delay);
+		} else {
+			pm_relax(mdwc->dev);
+		}
 	}
 
 	atomic_set(&dwc->in_lpm, 1);
@@ -4070,6 +4073,7 @@ static int dwc3_msm_vbus_notifier(struct notifier_block *nb,
 	struct dwc3_msm *mdwc = enb->mdwc;
 	char *eud_str;
 	const char *edev_name;
+	bool is_cdp;
 
 	if (!edev || !mdwc)
 		return NOTIFY_DONE;
@@ -4095,11 +4099,20 @@ static int dwc3_msm_vbus_notifier(struct notifier_block *nb,
 	}
 
 	/*
+	 * In case of ADSP based charger detection driving a pulse on
+	 * DP to ensure proper CDP detection will be taken care by
+	 * ADSP.
+	 */
+	is_cdp = ((mdwc->apsd_source == IIO) &&
+		(get_chg_type(mdwc) == POWER_SUPPLY_TYPE_USB_CDP)) ||
+		((mdwc->apsd_source == PSY) &&
+		(get_chg_type(mdwc) == POWER_SUPPLY_USB_TYPE_CDP));
+
+	/*
 	 * Drive a pulse on DP to ensure proper CDP detection
 	 * and only when the vbus connect event is a valid one.
 	 */
-	if (get_chg_type(mdwc) == POWER_SUPPLY_USB_TYPE_CDP &&
-			mdwc->vbus_active && !mdwc->check_eud_state) {
+	if (is_cdp && mdwc->vbus_active && !mdwc->check_eud_state) {
 		dev_dbg(mdwc->dev, "Connected to CDP, pull DP up\n");
 		mdwc->hs_phy->charger_detect(mdwc->hs_phy);
 	}
@@ -4790,6 +4803,9 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	mdwc->use_pdc_interrupts = of_property_read_bool(node,
 				"qcom,use-pdc-interrupts");
 	dwc3_set_notifier(&dwc3_msm_notify_event);
+
+	if (of_property_read_bool(node, "qcom,iommu-best-fit-algo"))
+		iommu_dma_enable_best_fit_algo(dev);
 
 	if (dma_set_mask_and_coherent(dev, DMA_BIT_MASK(64))) {
 		dev_err(&pdev->dev, "setting DMA mask to 64 failed.\n");
@@ -5726,10 +5742,10 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 		if (test_bit(ID, &mdwc->inputs) &&
 				!test_bit(B_SESS_VLD, &mdwc->inputs)) {
 			dbg_event(0xFF, "undef_id_!bsv", 0);
+			dwc3_msm_resume(mdwc);
 			pm_runtime_set_active(mdwc->dev);
 			pm_runtime_enable(mdwc->dev);
 			pm_runtime_get_noresume(mdwc->dev);
-			dwc3_msm_resume(mdwc);
 			pm_runtime_put_sync(mdwc->dev);
 			dbg_event(0xFF, "Undef NoUSB",
 				atomic_read(&mdwc->dev->power.usage_count));

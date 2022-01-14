@@ -407,7 +407,7 @@ struct mhi_dev_ring {
 	/* ring_ctx_shadow -> tracking ring_ctx in the host */
 	union mhi_dev_ring_ctx			*ring_ctx_shadow;
 	struct msi_buf_cb_data		msi_buffer;
-	void (*ring_cb)(struct mhi_dev *dev,
+	int (*ring_cb)(struct mhi_dev *dev,
 			union mhi_dev_ring_element_type *el,
 			void *ctx);
 };
@@ -508,7 +508,10 @@ struct mhi_dev_channel {
 	uint32_t			pend_wr_count;
 	uint32_t			msi_cnt;
 	uint32_t			flush_req_cnt;
+	uint32_t			pend_flush_cnt;
 	bool				skip_td;
+	bool				db_pending;
+	bool				reset_pending;
 };
 
 /* Structure device for mhi dev */
@@ -673,7 +676,8 @@ extern void *mhi_ipc_log;
 
 #define mhi_log(_msg_lvl, _msg, ...) do { \
 	if (_msg_lvl >= mhi_msg_lvl) { \
-		pr_err("[%s] "_msg, __func__, ##__VA_ARGS__); \
+		pr_err("[0x%x %s] "_msg, bhi_imgtxdb, \
+				__func__, ##__VA_ARGS__); \
 	} \
 	if (mhi_ipc_log && (_msg_lvl >= mhi_ipc_msg_lvl)) { \
 		ipc_log_string(mhi_ipc_log,                     \
@@ -773,7 +777,7 @@ int mhi_dev_add_element(struct mhi_dev_ring *ring,
  * @ring_cb:	callback function.
  */
 void mhi_ring_set_cb(struct mhi_dev_ring *ring,
-			void (*ring_cb)(struct mhi_dev *dev,
+			int (*ring_cb)(struct mhi_dev *dev,
 			union mhi_dev_ring_element_type *el, void *ctx));
 
 /**
